@@ -1,0 +1,237 @@
+// Prisma Schema for Personal Injury Demand Letter Generator
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ MULTI-TENANT ============
+
+model Firm {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  logoUrl       String?
+  primaryColor  String   @default("#1a365d")
+  letterheadHtml String? @db.Text
+  settings      Json     @default("{}")
+
+  users User[]
+  cases Case[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model User {
+  id      String   @id @default(cuid())
+  clerkId String   @unique
+  email   String
+  name    String
+  role    UserRole @default(ATTORNEY)
+
+  firm   Firm   @relation(fields: [firmId], references: [id])
+  firmId String
+
+  cases         Case[]             @relation("CreatedBy")
+  generatedDocs GeneratedDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clerkId])
+  @@index([firmId])
+}
+
+enum UserRole {
+  ADMIN
+  ATTORNEY
+  PARALEGAL
+  VIEWER
+}
+
+// ============ CASES ============
+
+model Case {
+  id         String     @id @default(cuid())
+  caseNumber String?
+  status     CaseStatus @default(INTAKE)
+
+  // Client Information
+  clientFirstName   String
+  clientLastName    String
+  clientDateOfBirth DateTime?
+  clientAddress     String?
+  clientPhone       String?
+  clientEmail       String?
+
+  // Incident Information
+  incidentDate        DateTime
+  incidentLocation    String?
+  incidentDescription String?  @db.Text
+  incidentType        String   @default("auto_accident")
+
+  // Defendant/Insurance Information
+  defendantName          String?
+  defendantInsuranceCompany String?
+  defendantPolicyNumber  String?
+  defendantAdjusterName  String?
+  defendantAdjusterEmail String?
+  defendantAdjusterPhone String?
+  claimNumber            String?
+
+  // Legal Information
+  jurisdiction         String    @default("CA")
+  statuteOfLimitations DateTime?
+
+  // Extracted & Processed Data (JSON for flexibility)
+  extractedData      Json?
+  treatmentTimeline  Json?
+  damagesCalculation Json?
+  attorneyWarnings   Json?
+
+  // Relationships
+  firm        Firm   @relation(fields: [firmId], references: [id])
+  firmId      String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById String
+
+  documents          Document[]
+  generatedDocuments GeneratedDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([firmId])
+  @@index([createdById])
+  @@index([status])
+  @@index([incidentDate])
+}
+
+enum CaseStatus {
+  INTAKE
+  DOCUMENTS_UPLOADED
+  PROCESSING
+  EXTRACTION_COMPLETE
+  DRAFT_READY
+  UNDER_REVIEW
+  SENT
+  SETTLED
+  LITIGATION
+  CLOSED
+}
+
+// ============ DOCUMENTS ============
+
+model Document {
+  id               String           @id @default(cuid())
+  filename         String
+  originalFilename String
+  fileUrl          String
+  fileSize         Int
+  mimeType         String
+  pageCount        Int?
+
+  category    DocumentCategory
+  subcategory String?
+
+  processingStatus ProcessingStatus @default(PENDING)
+  processingError  String?
+
+  extractedText String? @db.Text
+  extractedData Json?
+
+  documentDate DateTime?
+  providerName String?
+
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([category])
+  @@index([processingStatus])
+}
+
+enum DocumentCategory {
+  MEDICAL_RECORDS
+  MEDICAL_BILLS
+  POLICE_REPORT
+  PHOTOS
+  WAGE_DOCUMENTATION
+  INSURANCE_CORRESPONDENCE
+  WITNESS_STATEMENT
+  EXPERT_REPORT
+  PRIOR_MEDICAL_RECORDS
+  LIEN_LETTER
+  OTHER
+}
+
+enum ProcessingStatus {
+  PENDING
+  EXTRACTING_TEXT
+  CLASSIFYING
+  EXTRACTING_DATA
+  COMPLETED
+  FAILED
+}
+
+// ============ GENERATED DOCUMENTS ============
+
+model GeneratedDocument {
+  id           String         @id @default(cuid())
+  documentType GeneratedDocType
+  version      Int            @default(1)
+
+  tone       String @default("moderate")
+  parameters Json?
+
+  content     String  @db.Text
+  contentHtml String? @db.Text
+
+  warnings Json?
+
+  case        Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId      String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+
+  @@index([caseId])
+  @@index([documentType])
+}
+
+enum GeneratedDocType {
+  DEMAND_LETTER
+  EXECUTIVE_SUMMARY
+  GAP_ANALYSIS
+  TREATMENT_TIMELINE
+  DAMAGES_WORKSHEET
+}
+
+// ============ AUDIT LOG ============
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
