@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { clerkClient } from '@clerk/clerk-sdk-node';
+import { clerkClient, getAuth } from '@clerk/express';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors.js';
 import prisma from '../db/client.js';
 import { logger } from '../utils/logger.js';
@@ -30,24 +30,16 @@ export async function requireAuth(
   next: NextFunction
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
+    // Use Clerk's getAuth to get authentication info from the request
+    const authInfo = getAuth(req);
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('Missing or invalid authorization header');
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    // Verify the session token with Clerk
-    const sessionClaims = await clerkClient.verifyToken(token);
-
-    if (!sessionClaims || !sessionClaims.sub) {
-      throw new UnauthorizedError('Invalid session token');
+    if (!authInfo || !authInfo.userId) {
+      throw new UnauthorizedError('Not authenticated');
     }
 
     // Get or create user in our database
-    let user = await prisma.user.findUnique({
-      where: { clerkId: sessionClaims.sub },
+    const user = await prisma.user.findUnique({
+      where: { clerkId: authInfo.userId },
       include: { firm: true },
     });
 
@@ -58,7 +50,7 @@ export async function requireAuth(
 
     req.auth = {
       userId: user.id,
-      sessionId: sessionClaims.sid as string,
+      sessionId: authInfo.sessionId || '',
       user: {
         id: user.id,
         clerkId: user.clerkId,
@@ -98,3 +90,6 @@ export function requireRole(...roles: string[]) {
     next();
   };
 }
+
+// Re-export clerkClient for use elsewhere
+export { clerkClient };
