@@ -17,10 +17,15 @@ export interface Case {
   defendantInsuranceCompany?: string;
   claimNumber?: string;
   jurisdiction: string;
-  extractedData?: unknown;
-  treatmentTimeline?: unknown;
-  damagesCalculation?: unknown;
-  attorneyWarnings?: unknown;
+  extractedData?: Record<string, unknown>;
+  treatmentTimeline?: Record<string, unknown>;
+  damagesCalculation?: Record<string, unknown>;
+  attorneyWarnings?: Array<{
+    severity: 'critical' | 'moderate' | 'minor';
+    category: string;
+    message: string;
+    recommendation: string;
+  }>;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -56,7 +61,7 @@ export interface Document {
   processingStatus: ProcessingStatus;
   processingError?: string;
   extractedText?: string;
-  extractedData?: unknown;
+  extractedData?: Record<string, unknown>;
   documentDate?: string;
   providerName?: string;
   createdAt: string;
@@ -91,7 +96,7 @@ export interface GeneratedDocument {
   documentType: GeneratedDocType;
   version: number;
   tone: string;
-  parameters?: unknown;
+  parameters?: Record<string, unknown>;
   content: string;
   contentHtml?: string;
   warnings?: Warning[];
