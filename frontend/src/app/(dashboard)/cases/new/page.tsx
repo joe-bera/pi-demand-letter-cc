@@ -1,14 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/layout/page-header';
+import { FormField } from '@/components/forms/form-field';
+import { FormSection, FormGrid, FormActions } from '@/components/forms/form-section';
+import {
+  createCaseSchema,
+  type CreateCaseInput,
+  incidentTypes,
+  jurisdictions,
+} from '@/lib/schemas/case';
+import { User, Car, Building2, ArrowRight, Loader2 } from 'lucide-react';
+import { z } from 'zod';
+
+type FormErrors = Partial<Record<keyof CreateCaseInput, string>>;
+
+interface CaseCreateResponse {
+  success: boolean;
+  data: { id: string };
+}
 
 export default function NewCasePage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateCaseInput>({
     clientFirstName: '',
     clientLastName: '',
     clientEmail: '',
@@ -22,227 +41,302 @@ export default function NewCasePage() {
     claimNumber: '',
     jurisdiction: 'CA',
   });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
 
-  const createCase = useMutation({
-    mutationFn: (data: typeof formData) => api.post('/cases', data),
-    onSuccess: (response) => {
-      toast.success('Case created successfully');
+  const createCase = useMutation<CaseCreateResponse, Error, CreateCaseInput>({
+    mutationFn: (data: CreateCaseInput) =>
+      api.post<{ id: string }>('/cases', {
+        ...data,
+        incidentDate: new Date(data.incidentDate).toISOString(),
+      }),
+    onSuccess: (response: CaseCreateResponse) => {
+      toast.success('Case created successfully!', {
+        description: 'You can now upload documents.',
+      });
       router.push(`/cases/${response.data.id}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create case');
+      toast.error('Failed to create case', {
+        description: error.message || 'Please try again.',
+      });
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createCase.mutate({
-      ...formData,
-      incidentDate: new Date(formData.incidentDate).toISOString(),
-    });
+  const validateField = useCallback(
+    (name: keyof CreateCaseInput, value: string) => {
+      try {
+        const fieldSchema = createCaseSchema.shape[name];
+        fieldSchema.parse(value);
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          setErrors((prev) => ({
+            ...prev,
+            [name]: err.errors[0]?.message,
+          }));
+        }
+      }
+    },
+    []
+  );
+
+  const handleChange = useCallback(
+    (name: keyof CreateCaseInput, value: string) => {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      setTouched((prev) => new Set(prev).add(name));
+      validateField(name, value);
+    },
+    [validateField]
+  );
+
+  const validateForm = (): boolean => {
+    try {
+      createCaseSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const newErrors: FormErrors = {};
+        err.errors.forEach((error) => {
+          const field = error.path[0] as keyof CreateCaseInput;
+          if (!newErrors[field]) {
+            newErrors[field] = error.message;
+          }
+        });
+        setErrors(newErrors);
+        // Mark all error fields as touched
+        setTouched((prev) => {
+          const newTouched = new Set(prev);
+          Object.keys(newErrors).forEach((key) => newTouched.add(key));
+          return newTouched;
+        });
+      }
+      return false;
+    }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm()) {
+      createCase.mutate(formData);
+    } else {
+      toast.error('Please fix the errors before submitting');
+    }
+  };
+
+  const getFieldError = (name: keyof CreateCaseInput): string | undefined => {
+    return touched.has(name) ? errors[name] : undefined;
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Create New Case</h1>
-        <p className="text-gray-600">Enter the case information to get started</p>
-      </div>
+    <div className="max-w-3xl mx-auto pb-8">
+      <PageHeader
+        title="Create New Case"
+        description="Enter the case information to get started. Required fields are marked with an asterisk."
+        showBreadcrumbs
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         {/* Client Information */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold mb-4">Client Information</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Name *
-              </label>
-              <input
-                type="text"
-                name="clientFirstName"
-                value={formData.clientFirstName}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name *
-              </label>
-              <input
-                type="text"
-                name="clientLastName"
-                value={formData.clientLastName}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                name="clientEmail"
-                value={formData.clientEmail}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone
-              </label>
-              <input
-                type="tel"
-                name="clientPhone"
-                value={formData.clientPhone}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </div>
+        <FormSection
+          title="Client Information"
+          description="Basic contact details for your client"
+          icon={<User className="h-5 w-5" />}
+        >
+          <FormGrid columns={2}>
+            <FormField
+              name="clientFirstName"
+              label="First Name"
+              type="text"
+              required
+              value={formData.clientFirstName}
+              onChange={(value) => handleChange('clientFirstName', value)}
+              error={getFieldError('clientFirstName')}
+              inputProps={{ placeholder: 'John' }}
+            />
+            <FormField
+              name="clientLastName"
+              label="Last Name"
+              type="text"
+              required
+              value={formData.clientLastName}
+              onChange={(value) => handleChange('clientLastName', value)}
+              error={getFieldError('clientLastName')}
+              inputProps={{ placeholder: 'Doe' }}
+            />
+            <FormField
+              name="clientEmail"
+              label="Email"
+              type="email"
+              optional
+              value={formData.clientEmail}
+              onChange={(value) => handleChange('clientEmail', value)}
+              error={getFieldError('clientEmail')}
+              inputProps={{ placeholder: 'john@example.com' }}
+            />
+            <FormField
+              name="clientPhone"
+              label="Phone"
+              type="tel"
+              optional
+              value={formData.clientPhone}
+              onChange={(value) => handleChange('clientPhone', value)}
+              error={getFieldError('clientPhone')}
+              inputProps={{ placeholder: '(555) 123-4567' }}
+              helpText="US phone number format"
+            />
+          </FormGrid>
+        </FormSection>
 
         {/* Incident Information */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold mb-4">Incident Information</h2>
+        <FormSection
+          title="Incident Information"
+          description="Details about the accident or injury"
+          icon={<Car className="h-5 w-5" />}
+        >
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Incident Date *
-                </label>
-                <input
-                  type="date"
-                  name="incidentDate"
-                  value={formData.incidentDate}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Incident Type
-                </label>
-                <select
-                  name="incidentType"
-                  value={formData.incidentType}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="auto_accident">Auto Accident</option>
-                  <option value="slip_and_fall">Slip and Fall</option>
-                  <option value="workplace_injury">Workplace Injury</option>
-                  <option value="medical_malpractice">Medical Malpractice</option>
-                  <option value="product_liability">Product Liability</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Incident Location
-              </label>
-              <input
-                type="text"
-                name="incidentLocation"
-                value={formData.incidentLocation}
-                onChange={handleChange}
-                placeholder="Address or intersection"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            <FormGrid columns={2}>
+              <FormField
+                name="incidentDate"
+                label="Incident Date"
+                type="date"
+                required
+                value={formData.incidentDate}
+                onChange={(value) => handleChange('incidentDate', value)}
+                error={getFieldError('incidentDate')}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Incident Description
-              </label>
-              <textarea
-                name="incidentDescription"
-                value={formData.incidentDescription}
-                onChange={handleChange}
-                rows={3}
-                placeholder="Brief description of what happened"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <FormField
+                name="incidentType"
+                label="Incident Type"
+                type="select"
+                required
+                value={formData.incidentType}
+                onChange={(value) => handleChange('incidentType', value)}
+                error={getFieldError('incidentType')}
+                options={incidentTypes.map((t) => ({
+                  value: t.value,
+                  label: t.label,
+                }))}
               />
-            </div>
+            </FormGrid>
+            <FormField
+              name="incidentLocation"
+              label="Incident Location"
+              type="text"
+              optional
+              value={formData.incidentLocation}
+              onChange={(value) => handleChange('incidentLocation', value)}
+              error={getFieldError('incidentLocation')}
+              inputProps={{ placeholder: 'Address or intersection' }}
+            />
+            <FormField
+              name="incidentDescription"
+              label="Incident Description"
+              type="textarea"
+              optional
+              value={formData.incidentDescription}
+              onChange={(value) => handleChange('incidentDescription', value)}
+              error={getFieldError('incidentDescription')}
+              textareaProps={{
+                placeholder: 'Brief description of what happened...',
+                rows: 4,
+                showCount: true,
+                maxLength: 2000,
+              }}
+            />
           </div>
-        </div>
+        </FormSection>
 
         {/* Defendant/Insurance Information */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold mb-4">Defendant/Insurance Information</h2>
+        <FormSection
+          title="Defendant & Insurance"
+          description="Information about the at-fault party and their insurance"
+          icon={<Building2 className="h-5 w-5" />}
+        >
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Defendant Name
-              </label>
-              <input
+            <FormField
+              name="defendantName"
+              label="Defendant Name"
+              type="text"
+              optional
+              value={formData.defendantName}
+              onChange={(value) => handleChange('defendantName', value)}
+              error={getFieldError('defendantName')}
+              inputProps={{ placeholder: 'Name of the at-fault party' }}
+            />
+            <FormGrid columns={2}>
+              <FormField
+                name="defendantInsuranceCompany"
+                label="Insurance Company"
                 type="text"
-                name="defendantName"
-                value={formData.defendantName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                optional
+                value={formData.defendantInsuranceCompany}
+                onChange={(value) =>
+                  handleChange('defendantInsuranceCompany', value)
+                }
+                error={getFieldError('defendantInsuranceCompany')}
+                inputProps={{ placeholder: 'e.g., State Farm' }}
               />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Insurance Company
-                </label>
-                <input
-                  type="text"
-                  name="defendantInsuranceCompany"
-                  value={formData.defendantInsuranceCompany}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Claim Number
-                </label>
-                <input
-                  type="text"
-                  name="claimNumber"
-                  value={formData.claimNumber}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
+              <FormField
+                name="claimNumber"
+                label="Claim Number"
+                type="text"
+                optional
+                value={formData.claimNumber}
+                onChange={(value) => handleChange('claimNumber', value)}
+                error={getFieldError('claimNumber')}
+                inputProps={{ placeholder: 'Insurance claim number' }}
+              />
+            </FormGrid>
+            <FormField
+              name="jurisdiction"
+              label="Jurisdiction"
+              type="select"
+              required
+              value={formData.jurisdiction}
+              onChange={(value) => handleChange('jurisdiction', value)}
+              error={getFieldError('jurisdiction')}
+              options={jurisdictions.map((j) => ({
+                value: j.value,
+                label: j.label,
+              }))}
+              helpText="State where the incident occurred"
+            />
           </div>
-        </div>
+        </FormSection>
 
-        <div className="flex justify-end gap-4">
-          <button
+        {/* Form Actions */}
+        <FormActions align="between">
+          <Button
             type="button"
+            variant="outline"
             onClick={() => router.back()}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={createCase.isPending}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="min-w-[140px]"
           >
-            {createCase.isPending ? 'Creating...' : 'Create Case'}
-          </button>
-        </div>
+            {createCase.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                Create Case
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </FormActions>
       </form>
     </div>
   );
