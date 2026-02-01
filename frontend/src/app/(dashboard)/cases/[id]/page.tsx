@@ -2,18 +2,52 @@
 
 import { use } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { Case } from '@/types';
+import { formatDate, formatCurrency, formatShortDate } from '@/lib/utils';
+import { PageHeader, PageHeaderSkeleton } from '@/components/layout/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Separator } from '@/components/ui/separator';
 import {
   FileText,
   Upload,
   Sparkles,
   Download,
-  ArrowLeft,
+  ArrowRight,
   AlertTriangle,
+  User,
+  Calendar,
+  MapPin,
+  Car,
+  Building2,
+  FolderOpen,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { Case } from '@/types';
-import { formatDate, formatCurrency } from '@/lib/utils';
+
+interface DamagesCalculation {
+  specialDamages?: {
+    medicalBills?: number;
+    wageLoss?: number;
+    total?: number;
+  };
+  generalDamages?: {
+    total?: number;
+  };
+  total?: number;
+}
+
+interface Warning {
+  message: string;
+  severity: 'critical' | 'moderate' | 'minor';
+}
 
 export default function CaseDetailPage({
   params,
@@ -21,6 +55,7 @@ export default function CaseDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
 
   const { data, isLoading } = useQuery({
     queryKey: ['case', id],
@@ -31,274 +66,410 @@ export default function CaseDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading case...</div>
+      <div className="space-y-6">
+        <PageHeaderSkeleton showActions />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-48 rounded-lg" />
+            <Skeleton className="h-32 rounded-lg" />
+          </div>
+          <Skeleton className="h-64 rounded-lg" />
+        </div>
       </div>
     );
   }
 
   if (!caseData) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Case not found</div>
-      </div>
+      <EmptyState
+        icon={FolderOpen}
+        title="Case not found"
+        description="The case you're looking for doesn't exist or has been removed."
+        action={
+          <Link href="/cases">
+            <Button>View All Cases</Button>
+          </Link>
+        }
+      />
     );
   }
 
+  const clientName = `${caseData.clientFirstName} ${caseData.clientLastName}`;
+  const damages = caseData.damagesCalculation as DamagesCalculation | undefined;
+  const warnings = caseData.attorneyWarnings as Warning[] | undefined;
+
+  const statusVariants: Record<string, 'intake' | 'processing' | 'ready' | 'review' | 'sent' | 'settled' | 'closed'> = {
+    INTAKE: 'intake',
+    DOCUMENTS_UPLOADED: 'intake',
+    PROCESSING: 'processing',
+    EXTRACTION_COMPLETE: 'processing',
+    DRAFT_READY: 'ready',
+    UNDER_REVIEW: 'review',
+    SENT: 'sent',
+    SETTLED: 'settled',
+    LITIGATION: 'review',
+    CLOSED: 'closed',
+  };
+
+  const statusLabels: Record<string, string> = {
+    INTAKE: 'Intake',
+    DOCUMENTS_UPLOADED: 'Documents Uploaded',
+    PROCESSING: 'Processing',
+    EXTRACTION_COMPLETE: 'Extraction Complete',
+    DRAFT_READY: 'Draft Ready',
+    UNDER_REVIEW: 'Under Review',
+    SENT: 'Sent',
+    SETTLED: 'Settled',
+    LITIGATION: 'Litigation',
+    CLOSED: 'Closed',
+  };
+
   return (
-    <div>
-      <div className="mb-8">
-        <Link
-          href="/cases"
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Cases
-        </Link>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {caseData.clientFirstName} {caseData.clientLastName}
-            </h1>
-            <p className="text-gray-600">
-              {caseData.incidentType.replace('_', ' ')} - {formatDate(caseData.incidentDate)}
-            </p>
+    <div className="space-y-6 pb-8">
+      <PageHeader
+        title={clientName}
+        description={`${caseData.incidentType.replace(/_/g, ' ')} • ${formatShortDate(caseData.incidentDate)}`}
+        breadcrumbItems={[
+          { label: 'Cases', href: '/cases' },
+          { label: clientName },
+        ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <Link href={`/cases/${id}/documents`}>
+              <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                Documents
+              </Button>
+            </Link>
+            <Link href={`/cases/${id}/generate`}>
+              <Button>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Letter
+              </Button>
+            </Link>
           </div>
-          <StatusBadge status={caseData.status} />
-        </div>
-      </div>
+        }
+      >
+        <Badge variant={statusVariants[caseData.status] || 'secondary'}>
+          {statusLabels[caseData.status] || caseData.status}
+        </Badge>
+      </PageHeader>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <Link
-          href={`/cases/${id}/documents`}
-          className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="p-3 bg-blue-100 rounded-lg mr-4">
-            <Upload className="w-6 h-6 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="font-medium">Upload Documents</h3>
-            <p className="text-sm text-gray-500">
-              {caseData._count?.documents || 0} documents
-            </p>
-          </div>
-        </Link>
-
-        <Link
-          href={`/cases/${id}/generate`}
-          className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="p-3 bg-purple-100 rounded-lg mr-4">
-            <Sparkles className="w-6 h-6 text-purple-600" />
-          </div>
-          <div>
-            <h3 className="font-medium">Generate Letter</h3>
-            <p className="text-sm text-gray-500">AI-powered generation</p>
-          </div>
-        </Link>
-
-        <button className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          <div className="p-3 bg-green-100 rounded-lg mr-4">
-            <Download className="w-6 h-6 text-green-600" />
-          </div>
-          <div className="text-left">
-            <h3 className="font-medium">Export</h3>
-            <p className="text-sm text-gray-500">Word or PDF</p>
-          </div>
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-8">
-        {/* Case Details */}
-        <div className="col-span-2 space-y-6">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Case Information</h2>
-            <dl className="grid grid-cols-2 gap-4">
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Client Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <User className="h-4 w-4 text-muted-foreground" />
+                Client Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-sm text-gray-500">Client Name</dt>
-                <dd className="font-medium">
-                  {caseData.clientFirstName} {caseData.clientLastName}
-                </dd>
+                <p className="text-sm text-muted-foreground">Full Name</p>
+                <p className="font-medium">{clientName}</p>
               </div>
-              <div>
-                <dt className="text-sm text-gray-500">Incident Date</dt>
-                <dd className="font-medium">{formatDate(caseData.incidentDate)}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-500">Incident Type</dt>
-                <dd className="font-medium capitalize">
-                  {caseData.incidentType.replace('_', ' ')}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-500">Location</dt>
-                <dd className="font-medium">{caseData.incidentLocation || 'Not specified'}</dd>
-              </div>
-              {caseData.defendantInsuranceCompany && (
+              {caseData.clientEmail && (
                 <div>
-                  <dt className="text-sm text-gray-500">Insurance Company</dt>
-                  <dd className="font-medium">{caseData.defendantInsuranceCompany}</dd>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-medium">{caseData.clientEmail}</p>
                 </div>
               )}
-              {caseData.claimNumber && (
+              {caseData.clientPhone && (
                 <div>
-                  <dt className="text-sm text-gray-500">Claim Number</dt>
-                  <dd className="font-medium">{caseData.claimNumber}</dd>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="font-medium">{caseData.clientPhone}</p>
                 </div>
               )}
-            </dl>
-          </div>
+              {caseData.clientAddress && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Address</p>
+                  <p className="font-medium">{caseData.clientAddress}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Documents */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Documents</h2>
-              <Link
-                href={`/cases/${id}/documents`}
-                className="text-blue-600 hover:underline text-sm"
-              >
-                Manage Documents
-              </Link>
-            </div>
-            {(caseData._count?.documents || 0) === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <FileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                <p>No documents uploaded yet</p>
-                <Link
-                  href={`/cases/${id}/documents`}
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  Upload documents
-                </Link>
+          {/* Incident Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Car className="h-4 w-4 text-muted-foreground" />
+                Incident Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Incident Date</p>
+                  <p className="font-medium flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    {formatDate(caseData.incidentDate)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Incident Type</p>
+                  <p className="font-medium">
+                    {caseData.incidentType.replace(/_/g, ' ')}
+                  </p>
+                </div>
+                {caseData.incidentLocation && (
+                  <div className="sm:col-span-2">
+                    <p className="text-sm text-muted-foreground">Location</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      {caseData.incidentLocation}
+                    </p>
+                  </div>
+                )}
               </div>
-            ) : (
-              <p className="text-gray-600">
-                {caseData._count?.documents} documents uploaded
-              </p>
-            )}
-          </div>
+              {caseData.incidentDescription && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Description</p>
+                  <p className="text-sm">{caseData.incidentDescription}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Generated Letters */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Generated Documents</h2>
-              <Link
-                href={`/cases/${id}/generate`}
-                className="text-blue-600 hover:underline text-sm"
-              >
-                Generate New
+          {/* Defendant/Insurance Information */}
+          {(caseData.defendantName || caseData.defendantInsuranceCompany) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  Defendant & Insurance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                {caseData.defendantName && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Defendant Name</p>
+                    <p className="font-medium">{caseData.defendantName}</p>
+                  </div>
+                )}
+                {caseData.defendantInsuranceCompany && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Insurance Company</p>
+                    <p className="font-medium">{caseData.defendantInsuranceCompany}</p>
+                  </div>
+                )}
+                {caseData.claimNumber && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Claim Number</p>
+                    <p className="font-medium">{caseData.claimNumber}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-muted-foreground">Jurisdiction</p>
+                  <p className="font-medium">{caseData.jurisdiction}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Documents Summary */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Documents
+              </CardTitle>
+              <Link href={`/cases/${id}/documents`}>
+                <Button variant="ghost" size="sm">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </Link>
-            </div>
-            {(caseData._count?.generatedDocuments || 0) === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Sparkles className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                <p>No documents generated yet</p>
-                <Link
-                  href={`/cases/${id}/generate`}
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  Generate demand letter
-                </Link>
-              </div>
-            ) : (
-              <p className="text-gray-600">
-                {caseData._count?.generatedDocuments} documents generated
-              </p>
-            )}
-          </div>
+            </CardHeader>
+            <CardContent>
+              {caseData._count?.documents ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      {caseData._count.documents} document{caseData._count.documents !== 1 ? 's' : ''} uploaded
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Ready for processing
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Upload}
+                  title="No documents uploaded"
+                  description="Upload medical records, bills, and other case documents."
+                  size="sm"
+                  action={
+                    <Link href={`/cases/${id}/documents`}>
+                      <Button size="sm">Upload Documents</Button>
+                    </Link>
+                  }
+                />
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Link href={`/cases/${id}/documents`} className="block">
+                <Button variant="outline" className="w-full justify-start">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Documents
+                </Button>
+              </Link>
+              <Link href={`/cases/${id}/generate`} className="block">
+                <Button variant="outline" className="w-full justify-start">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate Letter
+                </Button>
+              </Link>
+              {caseData._count?.generatedDocuments ? (
+                <Button variant="outline" className="w-full justify-start">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Latest
+                </Button>
+              ) : null}
+            </CardContent>
+          </Card>
+
           {/* Damages Summary */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Damages Summary</h2>
-            {caseData.damagesCalculation ? (
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Medical Bills</span>
-                  <span className="font-medium">
-                    {formatCurrency(
-                      (caseData.damagesCalculation as { specialDamages?: { medicalBills?: number } })
-                        .specialDamages?.medicalBills || 0
-                    )}
-                  </span>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Damages Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {damages ? (
+                <div className="space-y-3">
+                  {damages.specialDamages?.medicalBills !== undefined && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Medical Bills</span>
+                      <span className="font-medium">
+                        {formatCurrency(damages.specialDamages.medicalBills)}
+                      </span>
+                    </div>
+                  )}
+                  {damages.specialDamages?.wageLoss !== undefined && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Wage Loss</span>
+                      <span className="font-medium">
+                        {formatCurrency(damages.specialDamages.wageLoss)}
+                      </span>
+                    </div>
+                  )}
+                  {damages.specialDamages?.total !== undefined && (
+                    <>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="font-medium">Total Special</span>
+                        <span className="font-bold text-lg">
+                          {formatCurrency(damages.specialDamages.total)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Wage Loss</span>
-                  <span className="font-medium">
-                    {formatCurrency(
-                      (caseData.damagesCalculation as { specialDamages?: { wageLoss?: number } })
-                        .specialDamages?.wageLoss || 0
-                    )}
-                  </span>
-                </div>
-                <div className="border-t pt-3 flex justify-between">
-                  <span className="font-medium">Total Special Damages</span>
-                  <span className="font-bold text-lg">
-                    {formatCurrency(
-                      (caseData.damagesCalculation as { specialDamages?: { total?: number } })
-                        .specialDamages?.total || 0
-                    )}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">
-                Upload and process documents to calculate damages
-              </p>
-            )}
-          </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Upload documents to calculate damages
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Warnings */}
-          {caseData.attorneyWarnings && (
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center">
-                <AlertTriangle className="w-5 h-5 text-yellow-500 mr-2" />
-                Warnings
-              </h2>
-              <ul className="space-y-2">
-                {(caseData.attorneyWarnings as Array<{ message: string; severity: string }>).map(
-                  (warning, index) => (
+          {warnings && warnings.length > 0 && (
+            <Card className="border-warning">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  Warnings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {warnings.map((warning, index) => (
                     <li
                       key={index}
-                      className={`text-sm p-2 rounded ${
+                      className={`text-sm p-2 rounded-md flex items-start gap-2 ${
                         warning.severity === 'critical'
-                          ? 'bg-red-50 text-red-800'
+                          ? 'bg-destructive/10 text-destructive'
                           : warning.severity === 'moderate'
-                          ? 'bg-yellow-50 text-yellow-800'
-                          : 'bg-gray-50 text-gray-800'
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-muted text-muted-foreground'
                       }`}
                     >
+                      {warning.severity === 'critical' ? (
+                        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      )}
                       {warning.message}
                     </li>
-                  )
-                )}
-              </ul>
-            </div>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           )}
+
+          {/* Case Timeline */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 h-2 w-2 rounded-full bg-success" />
+                  <div>
+                    <p className="text-sm font-medium">Case Created</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(caseData.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                {caseData._count?.documents ? (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 h-2 w-2 rounded-full bg-success" />
+                    <div>
+                      <p className="text-sm font-medium">Documents Uploaded</p>
+                      <p className="text-xs text-muted-foreground">
+                        {caseData._count.documents} document{caseData._count.documents !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+                {caseData._count?.generatedDocuments ? (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 h-2 w-2 rounded-full bg-success" />
+                    <div>
+                      <p className="text-sm font-medium">Letter Generated</p>
+                      <p className="text-xs text-muted-foreground">
+                        {caseData._count.generatedDocuments} version{caseData._count.generatedDocuments !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const statusConfig: Record<string, { label: string; className: string }> = {
-    INTAKE: { label: 'Intake', className: 'bg-gray-100 text-gray-800' },
-    DOCUMENTS_UPLOADED: { label: 'Documents Uploaded', className: 'bg-blue-100 text-blue-800' },
-    PROCESSING: { label: 'Processing', className: 'bg-yellow-100 text-yellow-800' },
-    EXTRACTION_COMPLETE: { label: 'Extracted', className: 'bg-indigo-100 text-indigo-800' },
-    DRAFT_READY: { label: 'Draft Ready', className: 'bg-green-100 text-green-800' },
-    SENT: { label: 'Sent', className: 'bg-teal-100 text-teal-800' },
-  };
-
-  const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
-
-  return (
-    <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${config.className}`}>
-      {config.label}
-    </span>
   );
 }
