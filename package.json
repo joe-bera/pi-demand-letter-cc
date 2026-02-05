@@ -4,6 +4,7 @@
   "private": true,
   "description": "AI-powered personal injury demand letter generator",
   "scripts": {
+    "start": "cd backend && npm start",
     "postinstall": "cd backend && npm install && cd ../frontend && npm install",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
