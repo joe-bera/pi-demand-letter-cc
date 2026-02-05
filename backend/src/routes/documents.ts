@@ -51,7 +51,7 @@ router.post(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
       });
@@ -76,7 +76,7 @@ router.post(
               fileSize: file.size,
               mimeType: file.mimetype,
               category: 'OTHER', // Will be classified by AI
-              caseId,
+              caseId: caseId as string,
               processingStatus: 'PENDING',
             },
           });
@@ -92,7 +92,7 @@ router.post(
 
       // Update case status
       await prisma.case.update({
-        where: { id: caseId },
+        where: { id: caseId as string },
         data: { status: 'DOCUMENTS_UPLOADED' },
       });
 
@@ -116,7 +116,7 @@ router.get(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
       });
@@ -126,7 +126,7 @@ router.get(
       }
 
       const documents = await prisma.document.findMany({
-        where: { caseId },
+        where: { caseId: caseId as string },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -150,7 +150,7 @@ router.get(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
       });
@@ -161,8 +161,8 @@ router.get(
 
       const document = await prisma.document.findFirst({
         where: {
-          id: docId,
-          caseId,
+          id: docId as string,
+          caseId: caseId as string,
         },
       });
 
@@ -196,7 +196,7 @@ router.delete(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
       });
@@ -207,8 +207,8 @@ router.delete(
 
       const document = await prisma.document.findFirst({
         where: {
-          id: docId,
-          caseId,
+          id: docId as string,
+          caseId: caseId as string,
         },
       });
 
@@ -221,7 +221,7 @@ router.delete(
 
       // Delete from database
       await prisma.document.delete({
-        where: { id: docId },
+        where: { id: docId as string },
       });
 
       res.json({
@@ -244,7 +244,7 @@ router.post(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
       });
@@ -256,14 +256,14 @@ router.post(
       // Get all pending documents
       const documents = await prisma.document.findMany({
         where: {
-          caseId,
+          caseId: caseId as string,
           processingStatus: { in: ['PENDING', 'FAILED'] },
         },
       });
 
       // Update case status
       await prisma.case.update({
-        where: { id: caseId },
+        where: { id: caseId as string },
         data: { status: 'PROCESSING' },
       });
 

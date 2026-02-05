@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../db/client';
-import { MedicalEvent, MedicalChronology, Case } from '@prisma/client';
+import { MedicalEvent, MedicalChronology, Case, Prisma } from '@prisma/client';
 import { logger } from '../utils/logger';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -148,14 +148,14 @@ export async function generateChronology(caseId: string): Promise<MedicalChronol
       lastVisitDate,
       executiveSummary,
       chronologyNarrative: narrative,
-      treatmentGaps: gapsWithExplanations,
+      treatmentGaps: gapsWithExplanations as unknown as Prisma.InputJsonValue,
       mmiDate: mmiInfo.mmiDate,
       mmiNotes: mmiInfo.mmiNotes,
       mmiReached: mmiInfo.mmiReached,
-      painScoreHistory,
-      providersSummary,
-      bodyPartsAffected,
-      diagnosisSummary,
+      painScoreHistory: painScoreHistory as unknown as Prisma.InputJsonValue,
+      providersSummary: providersSummary as unknown as Prisma.InputJsonValue,
+      bodyPartsAffected: bodyPartsAffected as unknown as Prisma.InputJsonValue,
+      diagnosisSummary: diagnosisSummary as unknown as Prisma.InputJsonValue,
     },
     update: {
       treatmentDurationDays,
@@ -165,14 +165,14 @@ export async function generateChronology(caseId: string): Promise<MedicalChronol
       lastVisitDate,
       executiveSummary,
       chronologyNarrative: narrative,
-      treatmentGaps: gapsWithExplanations,
+      treatmentGaps: gapsWithExplanations as unknown as Prisma.InputJsonValue,
       mmiDate: mmiInfo.mmiDate,
       mmiNotes: mmiInfo.mmiNotes,
       mmiReached: mmiInfo.mmiReached,
-      painScoreHistory,
-      providersSummary,
-      bodyPartsAffected,
-      diagnosisSummary,
+      painScoreHistory: painScoreHistory as unknown as Prisma.InputJsonValue,
+      providersSummary: providersSummary as unknown as Prisma.InputJsonValue,
+      bodyPartsAffected: bodyPartsAffected as unknown as Prisma.InputJsonValue,
+      diagnosisSummary: diagnosisSummary as unknown as Prisma.InputJsonValue,
       updatedAt: new Date(),
     }
   });

@@ -1,4 +1,5 @@
 import prisma from '../db/client.js';
+import { DocumentCategory, Prisma } from '@prisma/client';
 import { getFileFromS3 } from './storage.js';
 import { extractTextFromPdf, extractTextFromImage, extractTextFromDocx } from './textExtraction.js';
 import { classifyDocument } from './classificationService.js';
@@ -61,7 +62,7 @@ export async function processDocument(documentId: string): Promise<void> {
     await prisma.document.update({
       where: { id: documentId },
       data: {
-        category: classification.category,
+        category: classification.category as DocumentCategory,
         subcategory: classification.subcategory,
         documentDate: classification.documentDate ? new Date(classification.documentDate) : null,
         providerName: classification.providerName,
@@ -94,7 +95,7 @@ export async function processDocument(documentId: string): Promise<void> {
     await prisma.document.update({
       where: { id: documentId },
       data: {
-        extractedData: structuredData,
+        extractedData: structuredData as Prisma.InputJsonValue,
         processingStatus: 'COMPLETED',
       },
     });
@@ -165,9 +166,9 @@ async function synthesizeCaseData(caseId: string): Promise<void> {
   await prisma.case.update({
     where: { id: caseId },
     data: {
-      extractedData: { documents: allData },
-      treatmentTimeline,
-      damagesCalculation,
+      extractedData: { documents: allData } as Prisma.InputJsonValue,
+      treatmentTimeline: treatmentTimeline as Prisma.InputJsonValue,
+      damagesCalculation: damagesCalculation as Prisma.InputJsonValue,
       status: 'EXTRACTION_COMPLETE',
     },
   });

@@ -92,7 +92,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
   try {
     const caseData = await prisma.case.findFirst({
       where: {
-        id: req.params.id,
+        id: req.params.id as string,
         firmId: req.auth!.firm.id,
       },
       include: {
@@ -162,7 +162,7 @@ router.put(
       // Verify case belongs to firm
       const existingCase = await prisma.case.findFirst({
         where: {
-          id: req.params.id,
+          id: req.params.id as string,
           firmId: req.auth!.firm.id,
         },
       });
@@ -172,7 +172,7 @@ router.put(
       }
 
       const updatedCase = await prisma.case.update({
-        where: { id: req.params.id },
+        where: { id: req.params.id as string },
         data: {
           ...req.body,
           incidentDate: req.body.incidentDate
@@ -199,7 +199,7 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: Nex
   try {
     const existingCase = await prisma.case.findFirst({
       where: {
-        id: req.params.id,
+        id: req.params.id as string,
         firmId: req.auth!.firm.id,
       },
     });
@@ -209,7 +209,7 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: Nex
     }
 
     await prisma.case.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: 'CLOSED' },
     });
 

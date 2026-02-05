@@ -37,7 +37,7 @@ router.post(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
         include: {
@@ -57,7 +57,7 @@ router.post(
 
       // Get latest version number
       const latestDoc = await prisma.generatedDocument.findFirst({
-        where: { caseId, documentType },
+        where: { caseId: caseId as string, documentType },
         orderBy: { version: 'desc' },
       });
 
@@ -65,12 +65,12 @@ router.post(
 
       logger.info(`Generating ${documentType} for case ${caseId}, version ${version}`);
 
-      // Generate the document
+      // Generate the document - cast caseData to any to satisfy service type
       let result;
       if (documentType === 'DEMAND_LETTER') {
-        result = await generateDemandLetter(caseData, tone);
+        result = await generateDemandLetter(caseData as any, tone);
       } else {
-        result = await generateDocument(caseData, documentType, tone);
+        result = await generateDocument(caseData as any, documentType, tone);
       }
 
       // Save to database
@@ -83,14 +83,14 @@ router.post(
           content: result.content,
           contentHtml: result.contentHtml,
           warnings: result.warnings,
-          caseId,
+          caseId: caseId as string,
           createdById: req.auth!.user.id,
         },
       });
 
       // Update case status
       await prisma.case.update({
-        where: { id: caseId },
+        where: { id: caseId as string },
         data: {
           status: 'DRAFT_READY',
           attorneyWarnings: result.warnings,
@@ -117,7 +117,7 @@ router.get(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
       });
@@ -127,7 +127,7 @@ router.get(
       }
 
       const documents = await prisma.generatedDocument.findMany({
-        where: { caseId },
+        where: { caseId: caseId as string },
         orderBy: { createdAt: 'desc' },
         include: {
           createdBy: {
@@ -159,7 +159,7 @@ router.get(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
       });
@@ -170,8 +170,8 @@ router.get(
 
       const document = await prisma.generatedDocument.findFirst({
         where: {
-          id: genId,
-          caseId,
+          id: genId as string,
+          caseId: caseId as string,
         },
         include: {
           createdBy: {
@@ -209,8 +209,8 @@ router.post(
       // Get existing document
       const existingDoc = await prisma.generatedDocument.findFirst({
         where: {
-          id: genId,
-          caseId,
+          id: genId as string,
+          caseId: caseId as string,
         },
       });
 
@@ -221,7 +221,7 @@ router.post(
       // Get case with documents
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
         include: {
@@ -238,12 +238,12 @@ router.post(
       const newTone = tone || existingDoc.tone;
       const documentType = existingDoc.documentType;
 
-      // Generate new version
+      // Generate new version - cast caseData to any to satisfy service type
       let result;
       if (documentType === 'DEMAND_LETTER') {
-        result = await generateDemandLetter(caseData, newTone);
+        result = await generateDemandLetter(caseData as any, newTone);
       } else {
-        result = await generateDocument(caseData, documentType, newTone);
+        result = await generateDocument(caseData as any, documentType, newTone);
       }
 
       // Save new version
@@ -256,7 +256,7 @@ router.post(
           content: result.content,
           contentHtml: result.contentHtml,
           warnings: result.warnings,
-          caseId,
+          caseId: caseId as string,
           createdById: req.auth!.user.id,
         },
       });

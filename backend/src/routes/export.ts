@@ -19,7 +19,7 @@ router.get(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
         include: {
@@ -33,8 +33,8 @@ router.get(
 
       const document = await prisma.generatedDocument.findFirst({
         where: {
-          id: genId,
-          caseId,
+          id: genId as string,
+          caseId: caseId as string,
         },
       });
 
@@ -65,7 +65,7 @@ router.get(
       // Verify case belongs to firm
       const caseData = await prisma.case.findFirst({
         where: {
-          id: caseId,
+          id: caseId as string,
           firmId: req.auth!.firm.id,
         },
         include: {
@@ -79,8 +79,8 @@ router.get(
 
       const document = await prisma.generatedDocument.findFirst({
         where: {
-          id: genId,
-          caseId,
+          id: genId as string,
+          caseId: caseId as string,
         },
       });
 
