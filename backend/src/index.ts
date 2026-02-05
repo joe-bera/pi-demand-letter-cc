@@ -13,6 +13,8 @@ import generationRouter from './routes/generation.js';
 import exportRouter from './routes/export.js';
 import firmRouter from './routes/firm.js';
 import healthRouter from './routes/health.js';
+import medicalEventsRouter from './routes/medicalEvents.js';
+import chronologyRouter from './routes/chronology.js';
 import { logger } from './utils/logger.js';
 
 dotenv.config();
@@ -54,6 +56,8 @@ app.use('/api/documents', documentsRouter);
 app.use('/api/generate', generationRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/firm', firmRouter);
+app.use('/api', medicalEventsRouter);
+app.use('/api', chronologyRouter);
 
 // Error handling
 app.use(errorHandler);

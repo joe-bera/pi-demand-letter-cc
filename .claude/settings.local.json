@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial project setup: PI Demand Letter Generator\n\nComplete foundation for AI-powered personal injury demand letter generation app:\n\nBackend \\(Express + TypeScript + Prisma\\):\n- Database schema with Firm, User, Case, Document, GeneratedDocument models\n- API routes for cases, documents, generation, export, and firm management\n- Services for document processing, text extraction, AI classification/extraction\n- AI prompts for demand letter generation, document classification, and data extraction\n- Middleware for authentication \\(Clerk\\), validation \\(Zod\\), and error handling\n- S3 integration for document storage\n\nFrontend \\(Next.js 14 + TypeScript + Tailwind\\):\n- App Router with auth and dashboard layouts\n- Clerk authentication integration\n- Dashboard with case management UI\n- Case creation and detail pages\n- React Query for data fetching\n- shadcn/ui component foundation\n\nInfrastructure:\n- Docker Compose for local PostgreSQL\n- Environment variable configuration\n- Monorepo structure with concurrent dev scripts\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git rebase:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(git commit:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint:*)",
+      "Bash(wc:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker compose:*)",
+      "Bash(npx prisma db push:*)"
+    ]
+  }
+}

@@ -104,6 +104,8 @@ model Case {
 
   documents          Document[]
   generatedDocuments GeneratedDocument[]
+  medicalEvents      MedicalEvent[]
+  medicalChronology  MedicalChronology?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -152,6 +154,8 @@ model Document {
 
   case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
   caseId String
+
+  medicalEvents MedicalEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -216,6 +220,110 @@ enum GeneratedDocType {
   GAP_ANALYSIS
   TREATMENT_TIMELINE
   DAMAGES_WORKSHEET
+}
+
+// ============ MEDICAL EVENTS (Structured Extraction) ============
+
+model MedicalEvent {
+  id String @id @default(cuid())
+
+  case       Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId     String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+
+  // Core event data
+  dateOfService DateTime
+  providerName  String?
+  providerType  String?
+  facilityName  String?
+  documentType  String?
+
+  // Clinical data
+  chiefComplaint       String? @db.Text
+  diagnoses            Json? // [{diagnosis_name, icd_code, body_part}]
+  treatmentsProcedures Json? // [string]
+  medications          Json? // [{medication_name, dosage, frequency, purpose}]
+  imagingTests         Json? // [{test_type, body_part, findings, impression}]
+
+  // Findings
+  vitalSigns         Json?   // {blood_pressure, heart_rate, temperature, pain_score, pain_location}
+  subjectiveFindings String? @db.Text
+  objectiveFindings  String? @db.Text
+  assessment         String? @db.Text
+  plan               String? @db.Text
+
+  // Work & function
+  workStatus            String?
+  workRestrictions      String?
+  functionalLimitations Json? // [string]
+
+  // Prognosis
+  prognosis            String? @db.Text
+  permanencyStatements String? @db.Text
+  futureTreatment      Json? // [string]
+
+  // Case-relevant flags
+  preExistingMentions Json? // [{condition, context, relevance}]
+  keyQuotes           Json? // [string]
+  redFlags            Json? // [string]
+  causationStatements Json? // [string]
+
+  // Costs
+  totalCharge           Decimal? @db.Decimal(10, 2)
+  insurancePaid         Decimal? @db.Decimal(10, 2)
+  patientResponsibility Decimal? @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([documentId])
+  @@index([dateOfService])
+  @@index([providerType])
+}
+
+// ============ MEDICAL CHRONOLOGY (Generated Summary) ============
+
+model MedicalChronology {
+  id String @id @default(cuid())
+
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String @unique
+
+  // Summary stats
+  treatmentDurationDays Int?
+  totalVisits           Int?
+  totalMedicalCosts     Decimal? @db.Decimal(10, 2)
+  firstVisitDate        DateTime?
+  lastVisitDate         DateTime?
+
+  // Generated content
+  executiveSummary    String? @db.Text
+  chronologyNarrative String? @db.Text
+  injuryProgression   String? @db.Text
+  preExistingSummary  String? @db.Text
+
+  // Treatment gaps
+  treatmentGaps Json? // [{startDate, endDate, durationDays, explanation, impact}]
+
+  // MMI (Maximum Medical Improvement)
+  mmiDate    DateTime?
+  mmiNotes   String?   @db.Text
+  mmiReached Boolean   @default(false)
+
+  // Pain tracking
+  painScoreHistory Json? // [{date, score, provider, notes}]
+
+  // Summaries
+  providersSummary  Json? // [{name, type, visitCount, totalCost}]
+  bodyPartsAffected Json? // [{bodyPart, diagnoses, treatments}]
+  diagnosisSummary  Json? // [{diagnosis, icdCode, firstDate, lastDate}]
+
+  generatedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([caseId])
 }
 
 // ============ AUDIT LOG ============

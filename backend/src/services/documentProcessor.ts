@@ -3,6 +3,8 @@ import { getFileFromS3 } from './storage.js';
 import { extractTextFromPdf, extractTextFromImage, extractTextFromDocx } from './textExtraction.js';
 import { classifyDocument } from './classificationService.js';
 import { extractStructuredData } from './extractionService.js';
+import { extractMedicalEvents, saveMedicalEvents } from './medicalEventService.js';
+import { generateChronology } from './chronologyService.js';
 import { logger } from '../utils/logger.js';
 
 export async function processDocument(documentId: string): Promise<void> {
@@ -73,6 +75,21 @@ export async function processDocument(documentId: string): Promise<void> {
       classification.category
     );
 
+    // For medical documents, also extract medical events
+    if (classification.category === 'MEDICAL_RECORDS' || classification.category === 'MEDICAL_BILLS') {
+      logger.info(`Extracting medical events from ${document.originalFilename}`);
+      try {
+        const medicalEvents = await extractMedicalEvents(document, extractedText);
+        if (medicalEvents.length > 0) {
+          await saveMedicalEvents(document.caseId, documentId, medicalEvents);
+          logger.info(`Saved ${medicalEvents.length} medical events from ${document.originalFilename}`);
+        }
+      } catch (eventError) {
+        logger.error(`Failed to extract medical events: ${eventError}`);
+        // Continue processing - don't fail the whole document
+      }
+    }
+
     // Update with final data
     await prisma.document.update({
       where: { id: documentId },
@@ -96,6 +113,18 @@ export async function processDocument(documentId: string): Promise<void> {
     if (allCompleted) {
       // Synthesize all document data into case
       await synthesizeCaseData(document.caseId);
+
+      // Generate medical chronology if there are medical events
+      const eventCount = await prisma.medicalEvent.count({ where: { caseId: document.caseId } });
+      if (eventCount > 0) {
+        logger.info(`Generating chronology for case ${document.caseId}`);
+        try {
+          await generateChronology(document.caseId);
+          logger.info(`Chronology generated for case ${document.caseId}`);
+        } catch (chronoError) {
+          logger.error(`Failed to generate chronology: ${chronoError}`);
+        }
+      }
     }
   } catch (error) {
     logger.error(`Document processing failed for ${documentId}:`, error);

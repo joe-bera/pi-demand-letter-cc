@@ -144,3 +144,131 @@ export interface User {
 }
 
 export type UserRole = 'ADMIN' | 'ATTORNEY' | 'PARALEGAL' | 'VIEWER';
+
+// Medical Event types
+export interface MedicalEvent {
+  id: string;
+  caseId: string;
+  documentId: string;
+  dateOfService: string;
+  providerName?: string;
+  providerType?: string;
+  facilityName?: string;
+  documentType?: string;
+  chiefComplaint?: string;
+  diagnoses?: Array<{
+    diagnosis_name: string;
+    icd_code?: string;
+    body_part?: string;
+  }>;
+  treatmentsProcedures?: string[];
+  medications?: Array<{
+    medication_name: string;
+    dosage?: string;
+    frequency?: string;
+    purpose?: string;
+  }>;
+  imagingTests?: Array<{
+    test_type: string;
+    body_part?: string;
+    findings?: string;
+    impression?: string;
+  }>;
+  vitalSigns?: {
+    blood_pressure?: string;
+    heart_rate?: string;
+    temperature?: string;
+    pain_score?: number;
+    pain_location?: string;
+  };
+  subjectiveFindings?: string;
+  objectiveFindings?: string;
+  assessment?: string;
+  plan?: string;
+  workStatus?: string;
+  workRestrictions?: string;
+  functionalLimitations?: string[];
+  prognosis?: string;
+  permanencyStatements?: string;
+  futureTreatment?: string[];
+  preExistingMentions?: Array<{
+    condition: string;
+    context?: string;
+    relevance?: string;
+  }>;
+  keyQuotes?: string[];
+  redFlags?: string[];
+  causationStatements?: string[];
+  totalCharge?: number;
+  insurancePaid?: number;
+  patientResponsibility?: number;
+  document?: {
+    id: string;
+    originalFilename: string;
+    category: DocumentCategory;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Medical Chronology types
+export interface MedicalChronology {
+  id: string;
+  caseId: string;
+  treatmentDurationDays?: number;
+  totalVisits?: number;
+  totalMedicalCosts?: number;
+  firstVisitDate?: string;
+  lastVisitDate?: string;
+  executiveSummary?: string;
+  chronologyNarrative?: string;
+  injuryProgression?: string;
+  preExistingSummary?: string;
+  treatmentGaps?: TreatmentGap[];
+  mmiDate?: string;
+  mmiNotes?: string;
+  mmiReached: boolean;
+  painScoreHistory?: PainScoreEntry[];
+  providersSummary?: ProviderSummary[];
+  bodyPartsAffected?: BodyPartSummary[];
+  diagnosisSummary?: DiagnosisSummary[];
+  generatedAt: string;
+  updatedAt: string;
+}
+
+export interface TreatmentGap {
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  explanation?: string;
+  impact?: string;
+}
+
+export interface PainScoreEntry {
+  date: string;
+  score: number;
+  provider?: string;
+  notes?: string;
+}
+
+export interface ProviderSummary {
+  name: string;
+  type: string;
+  visitCount: number;
+  totalCost: number;
+}
+
+export interface DiagnosisSummary {
+  diagnosis: string;
+  icdCode?: string;
+  bodyPart?: string;
+  firstDate: string;
+  lastDate: string;
+  mentionCount: number;
+}
+
+export interface BodyPartSummary {
+  bodyPart: string;
+  diagnoses: string[];
+  treatments: string[];
+}
