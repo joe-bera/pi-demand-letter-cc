@@ -22,43 +22,49 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS configuration - must be before other middleware
-// Allow Vercel preview deployments and production
+// CORS configuration - must be FIRST
 app.use(cors({
-  origin: true, // Allow all origins for now (can restrict later)
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
-
-// Handle preflight requests explicitly
 app.options('*', cors());
 
-// Security middleware (after CORS)
+// Simple root test endpoint - no middleware needed
+app.get('/', (_req, res) => {
+  res.json({ status: 'Backend is running', timestamp: new Date().toISOString() });
+});
+
+// Health check BEFORE other middleware
+app.use('/api/health', healthRouter);
+
+// Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// Clerk authentication middleware
-app.use(clerkMiddleware());
+// Body parsing - needed before Clerk
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Clerk authentication middleware (only for API routes that need it)
+app.use('/api/cases', clerkMiddleware());
+app.use('/api/documents', clerkMiddleware());
+app.use('/api/generate', clerkMiddleware());
+app.use('/api/export', clerkMiddleware());
+app.use('/api/firm', clerkMiddleware());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { error: 'Too many requests, please try again later.' },
 });
 app.use('/api', limiter);
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
 // Request logging
 app.use(requestLogger);
-
-// Health check (no auth required)
-app.use('/api/health', healthRouter);
 
 // API routes
 app.use('/api/cases', casesRouter);
