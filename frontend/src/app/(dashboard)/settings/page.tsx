@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useUser, useOrganization } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,6 @@ import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const { user, isLoaded: userLoaded } = useUser();
-  const { organization, isLoaded: orgLoaded } = useOrganization();
   const [saving, setSaving] = useState(false);
 
   // Firm settings state
