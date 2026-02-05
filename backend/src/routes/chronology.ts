@@ -21,8 +21,8 @@ router.post('/cases/:caseId/chronology/generate', requireAuth, async (req: Authe
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -34,7 +34,7 @@ router.post('/cases/:caseId/chronology/generate', requireAuth, async (req: Authe
     }
 
     // Check if there are medical events
-    const eventCount = await prisma.medicalEvent.count({ where: { caseId } });
+    const eventCount = await prisma.medicalEvent.count({ where: { caseId: caseId as string } });
     if (eventCount === 0) {
       return res.status(400).json({
         success: false,
@@ -42,7 +42,7 @@ router.post('/cases/:caseId/chronology/generate', requireAuth, async (req: Authe
       });
     }
 
-    const chronology = await generateChronology(caseId);
+    const chronology = await generateChronology(caseId as string);
 
     res.json({
       success: true,
@@ -68,8 +68,8 @@ router.get('/cases/:caseId/chronology', requireAuth, async (req: AuthenticatedRe
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -80,7 +80,7 @@ router.get('/cases/:caseId/chronology', requireAuth, async (req: AuthenticatedRe
       });
     }
 
-    const chronology = await getChronology(caseId);
+    const chronology = await getChronology(caseId as string);
 
     if (!chronology) {
       return res.status(404).json({
@@ -113,8 +113,8 @@ router.get('/cases/:caseId/chronology/timeline', requireAuth, async (req: Authen
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -125,7 +125,7 @@ router.get('/cases/:caseId/chronology/timeline', requireAuth, async (req: Authen
       });
     }
 
-    const timelineData = await getTimelineData(caseId);
+    const timelineData = await getTimelineData(caseId as string);
 
     res.json({
       success: true,
@@ -151,8 +151,8 @@ router.get('/cases/:caseId/chronology/gaps', requireAuth, async (req: Authentica
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -163,7 +163,7 @@ router.get('/cases/:caseId/chronology/gaps', requireAuth, async (req: Authentica
       });
     }
 
-    const chronology = await getChronology(caseId);
+    const chronology = await getChronology(caseId as string);
 
     res.json({
       success: true,
@@ -192,8 +192,8 @@ router.get('/cases/:caseId/chronology/pain-history', requireAuth, async (req: Au
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -204,7 +204,7 @@ router.get('/cases/:caseId/chronology/pain-history', requireAuth, async (req: Au
       });
     }
 
-    const chronology = await getChronology(caseId);
+    const chronology = await getChronology(caseId as string);
 
     res.json({
       success: true,
@@ -230,8 +230,8 @@ router.get('/cases/:caseId/chronology/costs', requireAuth, async (req: Authentic
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -242,11 +242,11 @@ router.get('/cases/:caseId/chronology/costs', requireAuth, async (req: Authentic
       });
     }
 
-    const chronology = await getChronology(caseId);
+    const chronology = await getChronology(caseId as string);
 
     // Get detailed cost breakdown from events
     const events = await prisma.medicalEvent.findMany({
-      where: { caseId },
+      where: { caseId: caseId as string },
       select: {
         dateOfService: true,
         providerName: true,
@@ -311,8 +311,8 @@ router.get('/cases/:caseId/chronology/narrative', requireAuth, async (req: Authe
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -323,7 +323,7 @@ router.get('/cases/:caseId/chronology/narrative', requireAuth, async (req: Authe
       });
     }
 
-    const chronology = await getChronology(caseId);
+    const chronology = await getChronology(caseId as string);
 
     if (!chronology) {
       return res.status(404).json({

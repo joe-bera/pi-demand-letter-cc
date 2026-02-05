@@ -22,8 +22,8 @@ router.get('/cases/:caseId/medical-events', requireAuth, async (req: Authenticat
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -35,7 +35,7 @@ router.get('/cases/:caseId/medical-events', requireAuth, async (req: Authenticat
     }
 
     // Build query
-    const where: Record<string, unknown> = { caseId };
+    const where: Record<string, unknown> = { caseId: caseId as string };
 
     if (providerType) {
       where.providerType = providerType;
@@ -105,8 +105,8 @@ router.get('/cases/:caseId/medical-events/:eventId', requireAuth, async (req: Au
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -119,8 +119,8 @@ router.get('/cases/:caseId/medical-events/:eventId', requireAuth, async (req: Au
 
     const event = await prisma.medicalEvent.findFirst({
       where: {
-        id: eventId,
-        caseId,
+        id: eventId as string,
+        caseId: caseId as string,
       },
       include: {
         document: {
@@ -166,8 +166,8 @@ router.put('/cases/:caseId/medical-events/:eventId', requireAuth, async (req: Au
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -180,7 +180,7 @@ router.put('/cases/:caseId/medical-events/:eventId', requireAuth, async (req: Au
 
     // Verify event exists and belongs to case
     const existingEvent = await prisma.medicalEvent.findFirst({
-      where: { id: eventId, caseId }
+      where: { id: eventId as string, caseId: caseId as string }
     });
 
     if (!existingEvent) {
@@ -212,7 +212,7 @@ router.put('/cases/:caseId/medical-events/:eventId', requireAuth, async (req: Au
       filteredData.dateOfService = new Date(filteredData.dateOfService);
     }
 
-    const updatedEvent = await updateMedicalEvent(eventId, filteredData);
+    const updatedEvent = await updateMedicalEvent(eventId as string, filteredData);
 
     res.json({
       success: true,
@@ -238,8 +238,8 @@ router.delete('/cases/:caseId/medical-events/:eventId', requireAuth, async (req:
     // Verify case belongs to user's firm
     const caseRecord = await prisma.case.findFirst({
       where: {
-        id: caseId,
-        firmId: req.user!.firmId,
+        id: caseId as string,
+        firmId: req.auth!.user.firmId,
       }
     });
 
@@ -252,7 +252,7 @@ router.delete('/cases/:caseId/medical-events/:eventId', requireAuth, async (req:
 
     // Verify event exists and belongs to case
     const existingEvent = await prisma.medicalEvent.findFirst({
-      where: { id: eventId, caseId }
+      where: { id: eventId as string, caseId: caseId as string }
     });
 
     if (!existingEvent) {
@@ -262,7 +262,7 @@ router.delete('/cases/:caseId/medical-events/:eventId', requireAuth, async (req:
       });
     }
 
-    await deleteMedicalEvent(eventId);
+    await deleteMedicalEvent(eventId as string);
 
     res.json({
       success: true,
