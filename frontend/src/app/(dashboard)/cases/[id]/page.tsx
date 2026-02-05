@@ -21,6 +21,7 @@ import {
   Download,
   ArrowRight,
   AlertTriangle,
+  Activity,
   User,
   Calendar,
   MapPin,
@@ -139,6 +140,12 @@ export default function CaseDetailPage({
               <Button variant="outline">
                 <Upload className="mr-2 h-4 w-4" />
                 Documents
+              </Button>
+            </Link>
+            <Link href={`/cases/${id}/chronology`}>
+              <Button variant="outline">
+                <Activity className="mr-2 h-4 w-4" />
+                Chronology
               </Button>
             </Link>
             <Link href={`/cases/${id}/generate`}>
@@ -328,6 +335,12 @@ export default function CaseDetailPage({
                 <Button variant="outline" className="w-full justify-start">
                   <Upload className="mr-2 h-4 w-4" />
                   Upload Documents
+                </Button>
+              </Link>
+              <Link href={`/cases/${id}/chronology`} className="block">
+                <Button variant="outline" className="w-full justify-start">
+                  <Activity className="mr-2 h-4 w-4" />
+                  Medical Chronology
                 </Button>
               </Link>
               <Link href={`/cases/${id}/generate`} className="block">
