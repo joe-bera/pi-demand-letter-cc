@@ -22,34 +22,21 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Security middleware
-app.use(helmet());
-
-// CORS configuration - allow Vercel preview deployments and production
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'http://localhost:3000',
-].filter(Boolean) as string[];
-
+// CORS configuration - must be before other middleware
+// Allow Vercel preview deployments and production
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    // Allow if origin matches allowed list or is a Vercel preview deployment
-    if (
-      allowedOrigins.includes(origin) ||
-      origin.includes('vercel.app') ||
-      origin.includes('localhost')
-    ) {
-      return callback(null, true);
-    }
-
-    callback(new Error('Not allowed by CORS'));
-  },
+  origin: true, // Allow all origins for now (can restrict later)
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
+
+// Security middleware (after CORS)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 // Clerk authentication middleware
