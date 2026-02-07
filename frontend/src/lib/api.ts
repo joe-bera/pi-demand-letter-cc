@@ -17,38 +17,44 @@ interface ApiResponse<T> {
 
 class ApiClient {
   private baseUrl: string;
+  private tokenGetter: (() => Promise<string | null>) | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
-  private async getAuthToken(): Promise<string | null> {
-    if (typeof window === 'undefined') return null;
+  setTokenGetter(getter: () => Promise<string | null>) {
+    this.tokenGetter = getter;
+  }
 
-    try {
-      // Dynamic import to avoid SSR issues
-      const { useAuth } = await import('@clerk/nextjs');
-      // This won't work directly - we need a different approach
-      // For now, we'll use fetch with credentials
-      return null;
-    } catch {
-      return null;
+  private async getAuthHeaders(): Promise<HeadersInit> {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.tokenGetter) {
+      const token = await this.tokenGetter();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
+
+    return headers;
   }
 
   async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    const authHeaders = await this.getAuthHeaders();
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      ...authHeaders,
       ...options.headers,
     };
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers,
-      credentials: 'include',
     });
 
     const data = await response.json();
@@ -83,10 +89,14 @@ class ApiClient {
   }
 
   async upload<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+    const authHeaders = await this.getAuthHeaders();
+    // Remove Content-Type for FormData (browser sets it with boundary)
+    const { 'Content-Type': _, ...headersWithoutContentType } = authHeaders as Record<string, string>;
+
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
       body: formData,
-      credentials: 'include',
+      headers: headersWithoutContentType,
     });
 
     const data = await response.json();
