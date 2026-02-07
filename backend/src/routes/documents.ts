@@ -38,7 +38,7 @@ router.use(requireAuth);
 // POST /api/cases/:caseId/documents - Upload documents
 router.post(
   '/:caseId',
-  upload.array('files', 20),
+  upload.any(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { caseId } = req.params;
