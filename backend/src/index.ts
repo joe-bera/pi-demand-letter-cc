@@ -100,10 +100,22 @@ app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
+// Catch uncaught exceptions and unhandled rejections
+process.on('uncaughtException', (error) => {
+  console.error('UNCAUGHT EXCEPTION:', error);
+  logger.error(`Uncaught exception: ${error.message}`, { stack: error.stack });
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+  logger.error(`Unhandled rejection: ${reason}`);
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`Listening on 0.0.0.0:${PORT}`);
+  logger.info(`DATABASE_URL host: ${process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] || 'not set'}`);
 });
 
 export default app;
