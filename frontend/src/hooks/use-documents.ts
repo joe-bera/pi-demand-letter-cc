@@ -13,13 +13,17 @@ export function useDocuments(caseId: string) {
   return useQuery({
     queryKey: ['documents', caseId],
     queryFn: async (): Promise<DocumentsResponse> => {
-      const response = await api.get<DocumentsResponse>(`/documents/${caseId}`);
-      return response.data;
+      const response = await api.get<Document[]>(`/documents/${caseId}`);
+      const documents = Array.isArray(response.data) ? response.data : [];
+      return {
+        documents,
+        total: documents.length,
+      };
     },
     refetchInterval: (query) => {
       // Poll every 5 seconds if any document is still processing
       const data = query.state.data;
-      if (data?.documents.some((doc) =>
+      if (data?.documents?.some((doc) =>
         ['PENDING', 'EXTRACTING_TEXT', 'CLASSIFYING', 'EXTRACTING_DATA'].includes(doc.processingStatus)
       )) {
         return 5000;

@@ -20,6 +20,7 @@ import { logger } from './utils/logger.js';
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // CORS configuration - must be FIRST

@@ -62,20 +62,23 @@ export function useDocumentUpload({
           });
         }, 200);
 
-        const response = await api.upload<{ id: string }>(
+        const response = await api.upload<Array<{ id: string }>>(
           `/documents/${caseId}`,
           formData
         );
 
         clearInterval(progressInterval);
 
+        const doc = Array.isArray(response.data) ? response.data[0] : response.data;
+        const documentId = doc?.id;
+
         updateFile(uploadFile.id, {
           status: 'completed',
           progress: 100,
-          documentId: response.data.id,
+          documentId,
         });
 
-        onSuccess?.({ ...uploadFile, status: 'completed', documentId: response.data.id });
+        onSuccess?.({ ...uploadFile, status: 'completed', documentId });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Upload failed';
         updateFile(uploadFile.id, {
