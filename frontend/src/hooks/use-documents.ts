@@ -13,7 +13,7 @@ export function useDocuments(caseId: string) {
   return useQuery({
     queryKey: ['documents', caseId],
     queryFn: async (): Promise<DocumentsResponse> => {
-      const response = await api.get<DocumentsResponse>(`/cases/${caseId}/documents`);
+      const response = await api.get<DocumentsResponse>(`/documents/${caseId}`);
       return response.data;
     },
     refetchInterval: (query) => {
@@ -34,7 +34,7 @@ export function useDocument(caseId: string, documentId: string) {
   return useQuery({
     queryKey: ['document', caseId, documentId],
     queryFn: async (): Promise<Document> => {
-      const response = await api.get<Document>(`/cases/${caseId}/documents/${documentId}`);
+      const response = await api.get<Document>(`/documents/${caseId}/${documentId}`);
       return response.data;
     },
     enabled: !!caseId && !!documentId,
@@ -46,7 +46,7 @@ export function useDeleteDocument(caseId: string) {
 
   return useMutation({
     mutationFn: async (documentId: string) => {
-      await api.delete(`/cases/${caseId}/documents/${documentId}`);
+      await api.delete(`/documents/${caseId}/${documentId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', caseId] });
@@ -60,7 +60,7 @@ export function useReprocessDocument(caseId: string) {
 
   return useMutation({
     mutationFn: async (documentId: string) => {
-      const response = await api.post(`/cases/${caseId}/documents/${documentId}/reprocess`);
+      const response = await api.post(`/documents/${caseId}/process`);
       return response.data;
     },
     onSuccess: () => {
@@ -80,7 +80,7 @@ export function useUpdateDocumentCategory(caseId: string) {
       documentId: string;
       category: DocumentCategory;
     }) => {
-      const response = await api.put(`/cases/${caseId}/documents/${documentId}`, {
+      const response = await api.put(`/documents/${caseId}/${documentId}`, {
         category,
       });
       return response.data;

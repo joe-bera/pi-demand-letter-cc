@@ -86,11 +86,6 @@ app.use(requestLogger);
 // API routes
 app.use('/api/cases', casesRouter);
 app.use('/api/documents', documentsRouter);
-// Frontend expects /api/cases/:caseId/documents — rewrite to documents router format
-app.use('/api/cases/:caseId/documents', (req, res, next) => {
-  req.url = `/${req.params.caseId}${req.url === '/' ? '' : req.url}`;
-  documentsRouter(req, res, next);
-});
 app.use('/api/generate', generationRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/firm', firmRouter);

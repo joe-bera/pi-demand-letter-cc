@@ -63,7 +63,7 @@ export function useDocumentUpload({
         }, 200);
 
         const response = await api.upload<{ id: string }>(
-          `/cases/${caseId}/documents`,
+          `/documents/${caseId}`,
           formData
         );
 
