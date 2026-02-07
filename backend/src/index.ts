@@ -23,13 +23,30 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // CORS configuration - must be FIRST
-app.use(cors({
-  origin: true,
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://pi-demand-letter-cc.vercel.app',
+];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, health checks)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-}));
-app.options('*', cors());
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Simple root test endpoint - no middleware needed
 app.get('/', (_req, res) => {
